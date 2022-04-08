@@ -1,10 +1,11 @@
-# Globals to avoid burying hardcoded magic numbers
+# Globals to avoid embedding hardcoded magic numbers
 SPOKE_COUNT = 12
 RING_COUNT = 4
 PLATE_COUNT = 5
 TARGET_SPOKE_SUM = 42
 
 # This data is taken from the physical puzzle.
+# 0 means a gap in the plate, where a lower plate's value is visible.
 # Each 'plate' array is treated as an array of 4 circular arrays.
 # plate4 is the top plate, plate1 is the bottom, and the baseplate is functionally fixed in place.
 plate4 =    [[7,  0,  15, 0,  8,  0,  3,  0,  6,  0,  10, 0],
@@ -40,28 +41,28 @@ data = [baseplate, plate1, plate2, plate3, plate4]
 ##############################################
 
 
-def read_value_at_position_on_target_plate(plate_number, pos_y, pos_x):
-    adjusted_pos_x = (pos_x + plate_rotations[plate_number]) % SPOKE_COUNT
-    return data[plate_number][pos_y][adjusted_pos_x]
+def read_value_at_position_on_target_plate(target_plate, pos_y, pos_x):
+    adjusted_pos_x = (pos_x + plate_rotations[target_plate]) % SPOKE_COUNT
+    return data[target_plate][pos_y][adjusted_pos_x]
 
 
-def read_value_at_position(pos_y, pos_x):
+def read_top_value_at_position(pos_y, pos_x):
     result = 0
     target_plate = PLATE_COUNT - 1 # top plate accounting for 0 indexing
     while(result == 0):
         result = read_value_at_position_on_target_plate(target_plate, pos_y, pos_x)
-        target_plate = target_plate - 1
+        target_plate -= 1
     return result
 
 
-def rotate_plate(plate_number, rotation_amount=1):
-    plate_rotations[plate_number] += rotation_amount
+def rotate_plate(target_plate, rotation_amount=1):
+    plate_rotations[target_plate] += rotation_amount
 
 
 def calculate_spoke_sum(target_spoke):
     sum = 0
     for i in range(0, RING_COUNT):
-        sum += read_value_at_position(i, target_spoke)
+        sum += read_top_value_at_position(i, target_spoke)
     return sum
 
 
@@ -72,9 +73,9 @@ def all_spokes_equal_target_sum():
     return spoke_sums == [TARGET_SPOKE_SUM]*SPOKE_COUNT
 
 
-def spin_incrementally():
+def next_permutation():
     # Rotate the top plate one position. If it's been rotated through all positions, reset it and rotate the plate below it.
-    plate_to_rotate = PLATE_COUNT - 1 # account for 0-indexing
+    plate_to_rotate = PLATE_COUNT - 1 # top plate accounting for 0-indexing
     while True:
         plate_rotations[plate_to_rotate] += 1
         if plate_rotations[plate_to_rotate] >= SPOKE_COUNT:
@@ -96,7 +97,7 @@ def conclude_as_failure():
 def print_all_cell_values():
     for y in range(0, RING_COUNT):
         for x in range(0, SPOKE_COUNT):
-            print("{val:2d}".format(val = read_value_at_position(y, x)), end='  ')
+            print("{val:2d}".format(val = read_top_value_at_position(y, x)), end='  ')
         print("")
 
 
@@ -114,7 +115,7 @@ def conclude_as_success():
 
 def main():
     while(all_spokes_equal_target_sum() == False):
-        spin_incrementally()
+        next_permutation()
         if(all_permutations_have_been_tested()):
             conclude_as_failure()
             return
